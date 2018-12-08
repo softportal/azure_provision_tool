@@ -53,6 +53,9 @@ def get_resources()
   #end
 end
 
+def init
+end
+
 def run_example
   #
   # Create the Resource Manager Client with an Application (service principal) token provider
@@ -173,6 +176,11 @@ def run_example
 
   # Delete Resource group and everything in it
   puts 'Delete Resource Group'
+  resource_client.resource_groups.delete(GROUP_NAME)
+  puts "\nDeleted: #{GROUP_NAME}"
+end
+
+def delete_rs()
   resource_client.resource_groups.delete(GROUP_NAME)
   puts "\nDeleted: #{GROUP_NAME}"
 end

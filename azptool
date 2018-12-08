@@ -21,7 +21,10 @@ arg = ARGV[0]
 case action(arg)
 when :deploy
     run_example
+when :remove
+    delete_rs
 when :provision
+
 else
     puts "invalid action!"
 end
