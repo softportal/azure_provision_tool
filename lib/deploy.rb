@@ -19,17 +19,6 @@ NetworkModels = Network::Models
 ComputeModels = Compute::Models
 ResourceModels = Resources::Models
 
-
-# This sample shows how to manage a Azure virtual machines using using the Azure Resource Manager APIs for Ruby.
-#
-# This script expects that the following environment vars are set:
-#
-# AZURE_TENANT_ID: with your Azure Active Directory tenant id or domain
-# AZURE_CLIENT_ID: with your Azure Active Directory Application Client ID
-# AZURE_CLIENT_SECRET: with your Azure Active Directory Application Secret
-# AZURE_SUBSCRIPTION_ID: with your Azure Subscription Id
-#
-
 def print_item(group)
   puts "Created:"
   puts
@@ -141,22 +130,7 @@ def deploy
 
   vm = create_vm('firstvm', storage_account, vnet.subnets[0], public_ip)
 
-  binding.pry
-  #puts 'Listing all of the resources within the group'
-  #resource_client.resource_groups.list_resources(GROUP_NAME).each do |res|
-  #  print_item res
-  #end
-  #puts ''
-
   export_template(@resource_client)
-
-  # 'Turning off the virtual machine...'
-  # @compute_client.virtual_machines.power_off(GROUP_NAME, vm.name)
-  # 'Starting the virtual machine...'
-  # @compute_client.virtual_machines.start(GROUP_NAME, vm.name)
-
-  # puts 'Re-Starting the virtual machine...'
-  # @compute_client.virtual_machines.restart(GROUP_NAME, vm.name)
 end
 
 def delete_rs()
