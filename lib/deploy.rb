@@ -108,7 +108,7 @@ def run_example
       sr = NetworkModels::SecurityRule.new.tap do |rule|
                rule.name                       = 'main'
                rule.description                = 'default rule'
-               rule.protocol                   = 'Tcp'
+               rule.protocol                   = '*'
                rule.source_address_prefix      = '*'
                rule.destination_address_prefix = '*'
                rule.source_port_range          = '*'
@@ -159,10 +159,11 @@ def run_example
 
   puts 'Listing all of the resources within the group'
 
-  resource_client.resource_groups.list_resources(GROUP_NAME).each do |res|
-    print_item res
-  end
-  puts ''
+  binding.pry
+  #resource_client.resource_groups.list_resources(GROUP_NAME).each do |res|
+  #  print_item res
+  #end
+  #puts ''
 
   export_template(resource_client)
 
@@ -288,8 +289,9 @@ def create_vm(compute_client, network_client, location, vm_name, storage_acct, s
     puts "Found SSH public key in #{ssh_pub_location}. Disabling password and enabling SSH authentication."
     key_data = File.read(ssh_pub_location)
     puts "Using public key: #{key_data}"
+
     vm_create_params.os_profile.linux_configuration = ComputeModels::LinuxConfiguration.new.tap do |linux|
-      linux.disable_password_authentication = true
+      linux.disable_password_authentication = false
       linux.ssh = ComputeModels::SshConfiguration.new.tap do |ssh_config|
         ssh_config.public_keys = [
             ComputeModels::SshPublicKey.new.tap do |pub_key|
@@ -304,5 +306,3 @@ def create_vm(compute_client, network_client, location, vm_name, storage_acct, s
   print_item vm = compute_client.virtual_machines.create_or_update(GROUP_NAME, "sample-ruby-vm-#{vm_name}", vm_create_params)
   vm
 end
-
-
