@@ -48,18 +48,12 @@ end
 
 def get_resources()
   puts 'Listing all of the resources within the group'
-  #@resource_client.resource_groups.list_resources(GROUP_NAME).each do |res|
-  #  print_item res
-  #end
+  @resource_client.resource_groups.list_resources(GROUP_NAME).each do |res|
+    print_item res
+  end
 end
 
 def init
-end
-
-def run_example
-  #
-  # Create the Resource Manager Client with an Application (service principal) token provider
-  #
   creds = @conf[:credentials]
   subscription_id = creds[:sub] || '11111111-1111-1111-1111-111111111111' # your Azure Subscription Id
   provider = MsRestAzure::ApplicationTokenProvider.new(creds[:dir], creds[:client], creds[:secret])
@@ -73,10 +67,16 @@ def run_example
   }
 
 
-  resource_client = Resources::Client.new(options)
-  network_client = Network::Client.new(options)
-  storage_client = Storage::Client.new(options)
-  compute_client = Compute::Client.new(options)
+  @resource_client = Resources::Client.new(options)
+  @network_client = Network::Client.new(options)
+  @storage_client = Storage::Client.new(options)
+  @compute_client = Compute::Client.new(options)
+end
+
+def run_example
+  #
+  # Create the Resource Manager Client with an Application (service principal) token provider
+  #
 
   #
   # Managing resource groups
@@ -87,7 +87,7 @@ def run_example
 
   # Create Resource group
   puts 'Creating Resource Group...'
-  print_group resource_client.resource_groups.create_or_update(GROUP_NAME, resource_group_params)
+  print_group @resource_client.resource_groups.create_or_update(GROUP_NAME, resource_group_params)
 
   postfix = rand(1000)
   storage_account_name = "rubystor#{postfix}"
@@ -107,7 +107,7 @@ def run_example
       end
     end
   end
-  print_item storage_account = storage_client.storage_accounts.create(GROUP_NAME, storage_account_name, storage_create_params)
+  print_item storage_account = @storage_client.storage_accounts.create(GROUP_NAME, storage_account_name, storage_create_params)
 
 
   puts 'Creating a virtual network for the VM...'
@@ -127,7 +127,7 @@ def run_example
 
       vnet.subnets = [ subnet ]
   end
-  print_item vnet = network_client.virtual_networks.create_or_update(GROUP_NAME, 'sample-ruby-vnet', vnet_create_params)
+  print_item vnet = @network_client.virtual_networks.create_or_update(GROUP_NAME, 'sample-ruby-vnet', vnet_create_params)
 
   puts 'Creating a public IP address for the VM...'
   public_ip_params = NetworkModels::PublicIPAddress.new.tap do |ip|
@@ -137,9 +137,9 @@ def run_example
       dns.domain_name_label = 'sample-ruby-domain-name-label'
     end
   end
-  print_item public_ip = network_client.public_ipaddresses.create_or_update(GROUP_NAME, 'sample-ruby-pubip', public_ip_params)
+  print_item public_ip = @network_client.public_ipaddresses.create_or_update(GROUP_NAME, 'sample-ruby-pubip', public_ip_params)
 
-  vm = create_vm(compute_client, network_client, WEST_EU, 'firstvm', storage_account, vnet.subnets[0], public_ip)
+  vm = create_vm('firstvm', storage_account, vnet.subnets[0], public_ip)
 
   binding.pry
   #puts 'Listing all of the resources within the group'
@@ -148,40 +148,19 @@ def run_example
   #end
   #puts ''
 
-  export_template(resource_client)
+  export_template(@resource_client)
 
-  puts "Connect to your new virtual machine via: 'ssh -p 22 #{vm.os_profile.admin_username}@#{public_ip.dns_settings.fqdn}'. Admin Password is: Pa$$w0rd92"
+  # 'Turning off the virtual machine...'
+  # @compute_client.virtual_machines.power_off(GROUP_NAME, vm.name)
+  # 'Starting the virtual machine...'
+  # @compute_client.virtual_machines.start(GROUP_NAME, vm.name)
 
-  puts 'Now that we have built a virtual machine, lets turn off the virtual machine.'
-  puts 'Press any key to continue'
-  gets
-  puts 'Turning off the virtual machine...'
-  compute_client.virtual_machines.power_off(GROUP_NAME, vm.name)
-
-  puts 'Your virtual machine is now off. Lets start the virtual machine.'
-  puts 'Press any key to continue'
-  gets
-  puts 'Starting the virtual machine...'
-  compute_client.virtual_machines.start(GROUP_NAME, vm.name)
-
-  puts 'Your virtual machine has started. Lets restarting the virtual machine.'
-  puts 'Press any key to continue'
-  gets
-  puts 'Re-Starting the virtual machine...'
-  compute_client.virtual_machines.restart(GROUP_NAME, vm.name)
-  puts 'Your virtual machine is now on.'
-
-  puts 'Press any key to continue and delete the sample resources'
-  gets
-
-  # Delete Resource group and everything in it
-  puts 'Delete Resource Group'
-  resource_client.resource_groups.delete(GROUP_NAME)
-  puts "\nDeleted: #{GROUP_NAME}"
+  # puts 'Re-Starting the virtual machine...'
+  # @compute_client.virtual_machines.restart(GROUP_NAME, vm.name)
 end
 
 def delete_rs()
-  resource_client.resource_groups.delete(GROUP_NAME)
+  @resource_client.resource_groups.delete(GROUP_NAME)
   puts "\nDeleted: #{GROUP_NAME}"
 end
 
@@ -214,7 +193,8 @@ def export_template(resource_client)
   puts ''
 end
 # Create a Virtual Machine and return it
-def create_vm(compute_client, network_client, location, vm_name, storage_acct, subnet, public_ip)
+def create_vm(vm_name, storage_acct, subnet, public_ip)
+  location = WEST_EU
 
   puts "Creating security group..."
   params_nsg = NetworkModels::NetworkSecurityGroup.new.tap do |sg|
@@ -234,10 +214,10 @@ def create_vm(compute_client, network_client, location, vm_name, storage_acct, s
       sg.location            = WEST_EU
       sg.security_rules      = [ sr ]
   end
-  nsg = network_client.network_security_groups.create_or_update(GROUP_NAME,'coffe-grpc', params_nsg)
+  nsg = @network_client.network_security_groups.create_or_update(GROUP_NAME,'coffe-grpc', params_nsg)
 
   puts "Creating a network interface for the VM #{vm_name}"
-  print_item nic = network_client.network_interfaces.create_or_update(
+  print_item nic = @network_client.network_interfaces.create_or_update(
       GROUP_NAME,
       "sample-ruby-nic-#{vm_name}",
       NetworkModels::NetworkInterface.new.tap do |interface|
@@ -309,6 +289,6 @@ def create_vm(compute_client, network_client, location, vm_name, storage_acct, s
         end
     end
 
-  print_item vm = compute_client.virtual_machines.create_or_update(GROUP_NAME, "sample-ruby-vm-#{vm_name}", vm_create_params)
+  print_item vm = @compute_client.virtual_machines.create_or_update(GROUP_NAME, "sample-ruby-vm-#{vm_name}", vm_create_params)
   vm
 end

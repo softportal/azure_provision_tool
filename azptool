@@ -11,19 +11,21 @@ end
 
 begin
     @conf = YAML::load(File.read('.config/configuration'))
-    binding.pry
 rescue Exception => e
     raise 'unable to read file'
 end
 
+
 arg = ARGV[0]
+
+init
 
 case action(arg)
 when :deploy
     run_example
 when :remove
     delete_rs
-when :provision
+when :install
 
 else
     puts "invalid action!"
