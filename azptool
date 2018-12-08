@@ -11,6 +11,7 @@ end
 
 begin
     @conf = YAML::load(File.read('.config/configuration'))
+    binding.pry
 rescue Exception => e
     raise 'unable to read file'
 end

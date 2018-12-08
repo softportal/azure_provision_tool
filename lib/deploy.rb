@@ -104,25 +104,6 @@ def run_example
   end
   print_item storage_account = storage_client.storage_accounts.create(GROUP_NAME, storage_account_name, storage_create_params)
 
-  params_nsg = NetworkModels::NetworkSecurityGroup.new.tap do |sg|
-      sr = NetworkModels::SecurityRule.new.tap do |rule|
-               rule.name                       = 'main'
-               rule.description                = 'default rule'
-               rule.protocol                   = '*'
-               rule.source_address_prefix      = '*'
-               rule.destination_address_prefix = '*'
-               rule.source_port_range          = '*'
-               rule.access                     = 'Allow'
-               rule.priority                   = 100
-               rule.direction                  = 'Inbound'
-               rule.destination_port_ranges    = ['22','80', '443', '50051']
-      end
-
-      sg.location       = WEST_EU
-      sg.security_rules = [ sr ]
-      #sg.subnets        = vnet.subnets
-  end
-  nsg = network_client.network_security_groups.create_or_update(GROUP_NAME,'coffe-grpc', params_nsg)
 
   puts 'Creating a virtual network for the VM'
   vnet_create_params = NetworkModels::VirtualNetwork.new.tap do |vnet|
@@ -137,7 +118,6 @@ def run_example
       subnet = NetworkModels::Subnet.new.tap do |subnet|
           subnet.name                   = 'rubySampleSubnet'
           subnet.address_prefix         = '10.0.0.0/24'
-          subnet.network_security_group = nsg
       end
 
       vnet.subnets = [ subnet ]
@@ -227,12 +207,34 @@ def export_template(resource_client)
 end
 # Create a Virtual Machine and return it
 def create_vm(compute_client, network_client, location, vm_name, storage_acct, subnet, public_ip)
+
+  params_nsg = NetworkModels::NetworkSecurityGroup.new.tap do |sg|
+      sr = NetworkModels::SecurityRule.new.tap do |rule|
+               rule.name                       = 'main'
+               rule.description                = 'default rule'
+               rule.protocol                   = '*'
+               rule.source_address_prefix      = '*'
+               rule.destination_address_prefix = '*'
+               rule.source_port_range          = '*'
+               rule.access                     = 'Allow'
+               rule.priority                   = 100
+               rule.direction                  = 'Inbound'
+               rule.destination_port_ranges    = ['22','80', '443', '50051']
+      end
+
+      sg.location            = WEST_EU
+      sg.security_rules      = [ sr ]
+  end
+
+  nsg = network_client.network_security_groups.create_or_update(GROUP_NAME,'coffe-grpc', params_nsg)
+
   puts "Creating a network interface for the VM #{vm_name}"
   print_item nic = network_client.network_interfaces.create_or_update(
       GROUP_NAME,
       "sample-ruby-nic-#{vm_name}",
       NetworkModels::NetworkInterface.new.tap do |interface|
         interface.location = WEST_EU
+        interface.network_security_group = nsg
         interface.ip_configurations = [
             NetworkModels::NetworkInterfaceIPConfiguration.new.tap do |nic_conf|
               nic_conf.name = "sample-ruby-nic-#{vm_name}"
@@ -249,7 +251,7 @@ def create_vm(compute_client, network_client, location, vm_name, storage_acct, s
     vm.location = location
     vm.os_profile = ComputeModels::OSProfile.new.tap do |os_profile|
       os_profile.computer_name = vm_name
-      os_profile.admin_username = 'notAdmin'
+      os_profile.admin_username = 'user'
       os_profile.admin_password = 'Pa$$w0rd92'
     end
 
