@@ -29,23 +29,13 @@ ResourceModels = Resources::Models
 # AZURE_CLIENT_SECRET: with your Azure Active Directory Application Secret
 # AZURE_SUBSCRIPTION_ID: with your Azure Subscription Id
 #
-#
-#
-def load_credentials
-
-    begin
-        @conf = YAML::load(File.read('.config/configuration'))
-    rescue Exception => e
-        raise 'unable to read file'
-    end
-end
 
 def print_item(group)
   puts "\tName: #{group.name}"
   puts "\tId: #{group.id}"
   puts "\tLocation: #{group.location}"
   puts "\tTags: #{group.tags}"
-  #print_properties(group.properties)
+  print_properties(group.properties)
 end
 
 def print_machines(group_name)
@@ -147,17 +137,12 @@ def run_example
       subnet = NetworkModels::Subnet.new.tap do |subnet|
           subnet.name                   = 'rubySampleSubnet'
           subnet.address_prefix         = '10.0.0.0/24'
-          binding.pry
           subnet.network_security_group = nsg
       end
 
       vnet.subnets = [ subnet ]
   end
   print_item vnet = network_client.virtual_networks.create_or_update(GROUP_NAME, 'sample-ruby-vnet', vnet_create_params)
-
-  binding.pry
-
-  #subnets = network_client.virtual_networks.get(GROUP_NAME, 'sample-ruby-vnet').subnets
 
   puts 'Creating a public IP address for the VM'
   public_ip_params = NetworkModels::PublicIPAddress.new.tap do |ip|
@@ -168,15 +153,12 @@ def run_example
     end
   end
 
-  binding.pry
-
   print_item public_ip = network_client.public_ipaddresses.create_or_update(GROUP_NAME, 'sample-ruby-pubip', public_ip_params)
 
   vm = create_vm(compute_client, network_client, WEST_EU, 'firstvm', storage_account, vnet.subnets[0], public_ip)
 
   puts 'Listing all of the resources within the group'
 
-  binding.pry
   resource_client.resource_groups.list_resources(GROUP_NAME).each do |res|
     print_item res
   end
@@ -224,7 +206,6 @@ def print_group(resource)
 end
 
 def print_item(resource)
-    puts resource.public_methods
   resource.instance_variables.sort.each do |ivar|
     str = ivar.to_s.gsub /^@/, ''
     if resource.respond_to? str.to_sym
@@ -324,8 +305,4 @@ def create_vm(compute_client, network_client, location, vm_name, storage_acct, s
   vm
 end
 
-
-#init
-load_credentials
-run_example
 

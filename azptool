@@ -1,0 +1,26 @@
+#!/usr/bin/env ruby
+#
+
+$: << Dir.pwd + '/lib'
+
+require 'deploy'
+
+def action(arg)
+    arg.to_sym
+end
+
+begin
+    @conf = YAML::load(File.read('.config/configuration'))
+rescue Exception => e
+    raise 'unable to read file'
+end
+
+arg = ARGV[0]
+
+case action(arg)
+when :deploy
+    run_example
+when :provision
+else
+    puts "invalid action!"
+end
