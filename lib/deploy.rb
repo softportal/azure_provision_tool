@@ -73,7 +73,7 @@ def init
   @compute_client = Compute::Client.new(options)
 end
 
-def run_example
+def deploy
   #
   # Create the Resource Manager Client with an Application (service principal) token provider
   #

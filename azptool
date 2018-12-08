@@ -22,7 +22,7 @@ init
 
 case action(arg)
 when :deploy
-    run_example
+    deploy
 when :remove
     delete_rs
 when :install
