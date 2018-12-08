@@ -31,6 +31,8 @@ ResourceModels = Resources::Models
 #
 
 def print_item(group)
+  puts "Created:"
+  puts
   puts "\tName: #{group.name}"
   puts "\tId: #{group.id}"
   puts "\tLocation: #{group.location}"
@@ -81,12 +83,12 @@ def run_example
   end
 
   # Create Resource group
-  puts 'Create Resource Group'
+  puts 'Creating Resource Group...'
   print_group resource_client.resource_groups.create_or_update(GROUP_NAME, resource_group_params)
 
   postfix = rand(1000)
   storage_account_name = "rubystor#{postfix}"
-  puts "Creating a premium storage account with encryption off named #{storage_account_name} in resource group #{GROUP_NAME}"
+  puts "Creating a Standard storage account with encryption..."
   storage_create_params = StorageModels::StorageAccountCreateParameters.new.tap do |account|
     account.location = WEST_EU
     account.sku = StorageModels::Sku.new.tap do |sku|
@@ -105,7 +107,7 @@ def run_example
   print_item storage_account = storage_client.storage_accounts.create(GROUP_NAME, storage_account_name, storage_create_params)
 
 
-  puts 'Creating a virtual network for the VM'
+  puts 'Creating a virtual network for the VM...'
   vnet_create_params = NetworkModels::VirtualNetwork.new.tap do |vnet|
       vnet.location = WEST_EU
       vnet.address_space = NetworkModels::AddressSpace.new.tap do |addr_space|
@@ -124,7 +126,7 @@ def run_example
   end
   print_item vnet = network_client.virtual_networks.create_or_update(GROUP_NAME, 'sample-ruby-vnet', vnet_create_params)
 
-  puts 'Creating a public IP address for the VM'
+  puts 'Creating a public IP address for the VM...'
   public_ip_params = NetworkModels::PublicIPAddress.new.tap do |ip|
     ip.location = WEST_EU
     ip.public_ipallocation_method = NetworkModels::IPAllocationMethod::Dynamic
@@ -132,14 +134,12 @@ def run_example
       dns.domain_name_label = 'sample-ruby-domain-name-label'
     end
   end
-
   print_item public_ip = network_client.public_ipaddresses.create_or_update(GROUP_NAME, 'sample-ruby-pubip', public_ip_params)
 
   vm = create_vm(compute_client, network_client, WEST_EU, 'firstvm', storage_account, vnet.subnets[0], public_ip)
 
-  puts 'Listing all of the resources within the group'
-
   binding.pry
+  #puts 'Listing all of the resources within the group'
   #resource_client.resource_groups.list_resources(GROUP_NAME).each do |res|
   #  print_item res
   #end
@@ -208,6 +208,7 @@ end
 # Create a Virtual Machine and return it
 def create_vm(compute_client, network_client, location, vm_name, storage_acct, subnet, public_ip)
 
+  puts "Creating security group..."
   params_nsg = NetworkModels::NetworkSecurityGroup.new.tap do |sg|
       sr = NetworkModels::SecurityRule.new.tap do |rule|
                rule.name                       = 'main'
@@ -225,7 +226,6 @@ def create_vm(compute_client, network_client, location, vm_name, storage_acct, s
       sg.location            = WEST_EU
       sg.security_rules      = [ sr ]
   end
-
   nsg = network_client.network_security_groups.create_or_update(GROUP_NAME,'coffe-grpc', params_nsg)
 
   puts "Creating a network interface for the VM #{vm_name}"
@@ -251,8 +251,8 @@ def create_vm(compute_client, network_client, location, vm_name, storage_acct, s
     vm.location = location
     vm.os_profile = ComputeModels::OSProfile.new.tap do |os_profile|
       os_profile.computer_name = vm_name
-      os_profile.admin_username = 'user'
-      os_profile.admin_password = 'Pa$$w0rd92'
+      os_profile.admin_username = 'user_admin'
+      os_profile.admin_password = 'Asd1234554321'
     end
 
     vm.storage_profile = ComputeModels::StorageProfile.new.tap do |store_profile|
@@ -286,24 +286,20 @@ def create_vm(compute_client, network_client, location, vm_name, storage_acct, s
     end
   end
 
-  ssh_pub_location = File.expand_path('~/.ssh/id_rsa.pub')
-  if File.exists? ssh_pub_location
-    puts "Found SSH public key in #{ssh_pub_location}. Disabling password and enabling SSH authentication."
-    key_data = File.read(ssh_pub_location)
-    puts "Using public key: #{key_data}"
-
-    vm_create_params.os_profile.linux_configuration = ComputeModels::LinuxConfiguration.new.tap do |linux|
-      linux.disable_password_authentication = false
-      linux.ssh = ComputeModels::SshConfiguration.new.tap do |ssh_config|
-        ssh_config.public_keys = [
-            ComputeModels::SshPublicKey.new.tap do |pub_key|
-              pub_key.key_data = key_data
-              pub_key.path = '/home/notAdmin/.ssh/authorized_keys'
+  vm_create_params.os_profile.linux_configuration = ComputeModels::LinuxConfiguration.new.tap do |linux|
+        linux.disable_password_authentication = false
+        linux.ssh = ComputeModels::SshConfiguration.new.tap do |ssh_config|
+            keys = []
+            @conf[:access].each do |key|
+              k = ComputeModels::SshPublicKey.new.tap do |pub_key|
+                  pub_key.key_data = key
+                  pub_key.path = '/home/user_admin/.ssh/authorized_keys'
+              end
+              keys << k
             end
-        ]
-      end
+          ssh_config.public_keys = keys
+        end
     end
-  end
 
   print_item vm = compute_client.virtual_machines.create_or_update(GROUP_NAME, "sample-ruby-vm-#{vm_name}", vm_create_params)
   vm
