@@ -37,7 +37,7 @@ def print_group(resource)
   puts "\tlocation: #{resource.location}"
   puts "\ttags: #{resource.tags}"
   puts "\tproperties:"
-  print_item(resource.properties)
+  #print_item(resource.properties)
 end
 
 def print_item(resource)
@@ -125,6 +125,7 @@ def deploy
 
       vnet.subnets = [ subnet ]
   end
+
   print_item vnet = @network_client.virtual_networks.create_or_update(GROUP_NAME, "#{GROUP_NAME}-vnet", vnet_create_params)
 
   puts 'Creating a public IP address for the VM...'
@@ -137,7 +138,7 @@ def deploy
   end
   print_item public_ip = @network_client.public_ipaddresses.create_or_update(GROUP_NAME, IP, public_ip_params)
 
-  vm = create_vm(VM_NAME, storage_account, vnet.subnets[1], public_ip)
+  vm = create_vm(VM_NAME, storage_account, vnet.subnets[0], public_ip)
 
   @ip = @network_client.public_ipaddresses.get(GROUP_NAME, IP).ip_address
   #export_template(@resource_client)
