@@ -5,5 +5,10 @@
     :secret: ""
 
 :user : 'user_admin'
-:access
+:access:
     - ''
+:provision:
+    :install: ''
+    :stop:    ''
+    :update:  ''
+    :run:     ''

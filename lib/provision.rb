@@ -1,5 +1,3 @@
-
-require 'pry'
 def ip
     return @ip if @ip
     begin
@@ -19,9 +17,13 @@ def status
     puts("undeployed") if !deployed?
 end
 
-
 def execute(action)
     raise 'app is undeployed!' unless deployed?
 
     %x(ssh #{@conf[:user]}@#{ip} '#{action}')
+end
+
+def provision(action)
+    script = @conf[:provision][action]
+    execute("curl #{script}| bash")
 end

@@ -22,7 +22,6 @@ rescue Exception => e
     raise 'unable to read file'
 end
 
-
 arg = ARGV[0]
 
 usage = <<-EOT
@@ -38,9 +37,8 @@ usage = <<-EOT
     examples:
             azptool deploy
             azptool install
+            azptool run
 EOT
-
-
 
 
 init
@@ -53,7 +51,13 @@ when :remove
 when :status
     status
 when :install
-    ip
+    provision(:install)
+when :run
+    provision(:run)
+when :stop
+    provision(:stop)
+when :update
+    provision(:update)
 else
     STDOUT.print(usage)
 end
