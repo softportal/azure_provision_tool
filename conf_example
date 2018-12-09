@@ -4,5 +4,6 @@
     :dir:    ""
     :secret: ""
 
+:user : 'user_admin'
 :access
     - ''

@@ -1,13 +1,7 @@
-#!/usr/bin/env ruby
-
 require 'azure_mgmt_resources'
 require 'azure_mgmt_compute'
 require 'azure_mgmt_network'
 require 'azure_mgmt_storage'
-require 'pry'
-
-WEST_EU = 'westeurope'
-GROUP_NAME = 'masteriot'
 
 Storage = Azure::Storage::Profiles::Latest::Mgmt
 Network = Azure::Network::Profiles::V2018_03_01::Mgmt
@@ -19,14 +13,16 @@ NetworkModels = Network::Models
 ComputeModels = Compute::Models
 ResourceModels = Resources::Models
 
-def print_item(group)
+# PRINT METHODS
+##################################################
+def print_item_auz(group)
   puts "Created:"
   puts
   puts "\tName: #{group.name}"
   puts "\tId: #{group.id}"
   puts "\tLocation: #{group.location}"
   puts "\tTags: #{group.tags}"
-  print_properties(group.properties)
+  #print_properties(group.properties)
 end
 
 def print_machines(group_name)
@@ -34,6 +30,26 @@ def print_machines(group_name)
         print_item(vm)
     end
 end
+
+def print_group(resource)
+  puts "\tname: #{resource.name}"
+  puts "\tid: #{resource.id}"
+  puts "\tlocation: #{resource.location}"
+  puts "\ttags: #{resource.tags}"
+  puts "\tproperties:"
+  print_item(resource.properties)
+end
+
+def print_item(resource)
+  resource.instance_variables.sort.each do |ivar|
+    str = ivar.to_s.gsub /^@/, ''
+    if resource.respond_to? str.to_sym
+      puts "\t\t#{str}: #{resource.send(str.to_sym)}"
+    end
+  end
+  puts "\n\n"
+end
+#######################################################
 
 def get_resources()
   puts 'Listing all of the resources within the group'
@@ -63,13 +79,6 @@ def init
 end
 
 def deploy
-  #
-  # Create the Resource Manager Client with an Application (service principal) token provider
-  #
-
-  #
-  # Managing resource groups
-  #
   resource_group_params = ResourceModels::ResourceGroup.new.tap do |rg|
     rg.location = WEST_EU
   end
@@ -79,7 +88,7 @@ def deploy
   print_group @resource_client.resource_groups.create_or_update(GROUP_NAME, resource_group_params)
 
   postfix = rand(1000)
-  storage_account_name = "rubystor#{postfix}"
+  storage_account_name = "#{GROUP_NAME}storage"
   puts "Creating a Standard storage account with encryption..."
   storage_create_params = StorageModels::StorageAccountCreateParameters.new.tap do |account|
     account.location = WEST_EU
@@ -110,27 +119,30 @@ def deploy
       end
 
       subnet = NetworkModels::Subnet.new.tap do |subnet|
-          subnet.name                   = 'rubySampleSubnet'
+          subnet.name                   = 'subnet'
           subnet.address_prefix         = '10.0.0.0/24'
       end
 
       vnet.subnets = [ subnet ]
   end
-  print_item vnet = @network_client.virtual_networks.create_or_update(GROUP_NAME, 'sample-ruby-vnet', vnet_create_params)
+  print_item vnet = @network_client.virtual_networks.create_or_update(GROUP_NAME, "#{GROUP_NAME}-vnet", vnet_create_params)
 
   puts 'Creating a public IP address for the VM...'
   public_ip_params = NetworkModels::PublicIPAddress.new.tap do |ip|
     ip.location = WEST_EU
     ip.public_ipallocation_method = NetworkModels::IPAllocationMethod::Dynamic
     ip.dns_settings = NetworkModels::PublicIPAddressDnsSettings.new.tap do |dns|
-      dns.domain_name_label = 'sample-ruby-domain-name-label'
+      dns.domain_name_label = 'masteriot'
     end
   end
-  print_item public_ip = @network_client.public_ipaddresses.create_or_update(GROUP_NAME, 'sample-ruby-pubip', public_ip_params)
+  print_item public_ip = @network_client.public_ipaddresses.create_or_update(GROUP_NAME, IP, public_ip_params)
 
-  vm = create_vm('firstvm', storage_account, vnet.subnets[0], public_ip)
+  vm = create_vm(VM_NAME, storage_account, vnet.subnets[1], public_ip)
 
-  export_template(@resource_client)
+  @ip = @network_client.public_ipaddresses.get(GROUP_NAME, IP).ip_address
+  #export_template(@resource_client)
+
+  puts "your application is deployed: #{@ip}, your user is :#{@conf[:user]}"
 end
 
 def delete_rs()
@@ -138,24 +150,6 @@ def delete_rs()
   puts "\nDeleted: #{GROUP_NAME}"
 end
 
-def print_group(resource)
-  puts "\tname: #{resource.name}"
-  puts "\tid: #{resource.id}"
-  puts "\tlocation: #{resource.location}"
-  puts "\ttags: #{resource.tags}"
-  puts "\tproperties:"
-  print_item(resource.properties)
-end
-
-def print_item(resource)
-  resource.instance_variables.sort.each do |ivar|
-    str = ivar.to_s.gsub /^@/, ''
-    if resource.respond_to? str.to_sym
-      puts "\t\t#{str}: #{resource.send(str.to_sym)}"
-    end
-  end
-  puts "\n\n"
-end
 
 def export_template(resource_client)
   puts "Exporting the resource group template for #{GROUP_NAME}"
@@ -166,6 +160,7 @@ def export_template(resource_client)
   puts export_result.template
   puts ''
 end
+
 # Create a Virtual Machine and return it
 def create_vm(vm_name, storage_acct, subnet, public_ip)
   location = WEST_EU
@@ -188,18 +183,18 @@ def create_vm(vm_name, storage_acct, subnet, public_ip)
       sg.location            = WEST_EU
       sg.security_rules      = [ sr ]
   end
-  nsg = @network_client.network_security_groups.create_or_update(GROUP_NAME,'coffe-grpc', params_nsg)
+  nsg = @network_client.network_security_groups.create_or_update(GROUP_NAME,'coffe-grpc_rules', params_nsg)
 
   puts "Creating a network interface for the VM #{vm_name}"
   print_item nic = @network_client.network_interfaces.create_or_update(
       GROUP_NAME,
-      "sample-ruby-nic-#{vm_name}",
+      "nic-#{vm_name}",
       NetworkModels::NetworkInterface.new.tap do |interface|
         interface.location = WEST_EU
         interface.network_security_group = nsg
         interface.ip_configurations = [
             NetworkModels::NetworkInterfaceIPConfiguration.new.tap do |nic_conf|
-              nic_conf.name = "sample-ruby-nic-#{vm_name}"
+              nic_conf.name = "nic-#{vm_name}"
               nic_conf.private_ipallocation_method = NetworkModels::IPAllocationMethod::Dynamic
               nic_conf.subnet = subnet
               nic_conf.public_ipaddress = public_ip
@@ -213,7 +208,7 @@ def create_vm(vm_name, storage_acct, subnet, public_ip)
     vm.location = location
     vm.os_profile = ComputeModels::OSProfile.new.tap do |os_profile|
       os_profile.computer_name = vm_name
-      os_profile.admin_username = 'user_admin'
+      os_profile.admin_username = @conf[:user]
       os_profile.admin_password = 'Asd1234554321'
     end
 
@@ -225,7 +220,7 @@ def create_vm(vm_name, storage_acct, subnet, public_ip)
         ref.version = 'latest'
       end
       store_profile.os_disk = ComputeModels::OSDisk.new.tap do |os_disk|
-        os_disk.name = "sample-os-disk-#{vm_name}"
+        os_disk.name = "os-disk-#{vm_name}"
         os_disk.caching = ComputeModels::CachingTypes::None
         os_disk.create_option = ComputeModels::DiskCreateOptionTypes::FromImage
         os_disk.vhd = ComputeModels::VirtualHardDisk.new.tap do |vhd|
@@ -263,6 +258,6 @@ def create_vm(vm_name, storage_acct, subnet, public_ip)
         end
     end
 
-  print_item vm = @compute_client.virtual_machines.create_or_update(GROUP_NAME, "sample-ruby-vm-#{vm_name}", vm_create_params)
+  print_item vm = @compute_client.virtual_machines.create_or_update(GROUP_NAME, vm_name, vm_create_params)
   vm
 end

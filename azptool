@@ -3,7 +3,14 @@
 
 $: << Dir.pwd + '/lib'
 
+WEST_EU    = 'westeurope'
+GROUP_NAME = 'masteriot'
+IP         = 'pubip'
+VM_NAME    = "#{GROUP_NAME}-vm"
+
+
 require 'deploy'
+require 'provision'
 
 def action(arg)
     arg.to_sym
@@ -15,7 +22,24 @@ rescue Exception => e
     raise 'unable to read file'
 end
 
+
 arg = ARGV[0]
+
+usage = <<-EOT
+    Basic tool testing azure ruby bindings:
+    Usage:
+
+        - deploy:  launch the application in AzureCloud
+        - remove:  delete the application
+        - status:  get the status of the application
+        - install: perform the remote installation
+        - update:  update your remote application
+
+    examples:
+            azptool deploy
+            azptool install
+EOT
+
 
 
 
@@ -26,8 +50,10 @@ when :deploy
     deploy
 when :remove
     delete_rs
+when :status
+    status
 when :install
-
+    ip
 else
-    puts "invalid action!"
+    STDOUT.print(usage)
 end
