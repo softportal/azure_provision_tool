@@ -1,10 +1,26 @@
 # azure_provision_tool
 simple tool using azure api and bindings, stutent project
 
+The purpose of this tool is to try azure-ruby bindings and provide some small funcionality, in this case we use a coffeegrpc fork service performing basic stuff:
+
+```
+# playing with grpc
+https://github.com/softportal/coffeegrpc
+```
+
+
 
 ## Requirements
 * ruby
+* bundler
 
+## Installation:
+
+```bash
+    clone repo
+    cd repo
+    bundle install
+```
 
 ## Usage
 
@@ -19,9 +35,10 @@ simple tool using azure api and bindings, stutent project
         - update:  update your remote application
 
     examples:
-            azptool deploy
-            azptool install
-            azptool run
+            ./azptool deploy
+            ./azptool install
+            ./azptool run
+            ./azptool stop
 
 ```
 
