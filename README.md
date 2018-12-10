@@ -33,14 +33,18 @@ https://github.com/pilotAlpal/conf_coffee_gRPC
     $ cd azure_provision_tool
     $ mkdir .config && touch .config/configuration
     $ vi .config/configuration
+```
+
+#### .config/configuration:
+```
 :credentials:
     :client: "XxXXXXX4600970bx6"
     :sub:    "XxXXXXXbd09330b03"
     :dir:    "XxXXXXXdf05800993"
     :secret: "XxXXXXXpR0fh60cdsadad=XXXX"
-```
 
-```
+
+
 :user: 'user_admin'
 
 :access:
