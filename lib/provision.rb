@@ -25,5 +25,5 @@ end
 
 def provision(action)
     script = @conf[:provision][action]
-    execute("curl #{script}| bash")
+    execute("curl -sL #{script}| bash")
 end
